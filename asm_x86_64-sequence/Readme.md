@@ -2,7 +2,7 @@
 This is small program for learning basics of assembler.
 
 ## Description
-Program takes 1 parameter - path to file. Opens file and reads byte by byte. It treats byte as a number from 0 to 255. We check if file has valid pattern. Every 0 is a separator. The pattern is correct in every group of numbers (group = numbers between zeros) is the same in the sense that we can permutate one group and then we get the other one. There is also requirement that every number in group may occut at most once. Exit code is the result of validation.
+Program takes 1 parameter - path to file. Opens a file and reads byte by byte. It treats a byte as a number from 0 to 255. We check if file has a valid pattern. Every 0 is a separator. The pattern is correct if every group of numbers (group = numbers between zeros) is the same in the sense that we can permutate one group and then we get another group. There is also requirement that every number in each group may occut at most once. Exit code is the result of validation.
 
 ## Build
 Requirements:
