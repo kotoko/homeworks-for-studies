@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Czytnik RSS</string>
+    <string name="title_activity_show_message">Pokaż wiadomość</string>
+    <string name="title_activity_settings">Ustawienia</string>
+    <string name="add">Dodaj</string>
+    <string name="delete">Usuń</string>
+    <string name="cancel">Anuluj</string>
+    <string name="refresh">Odśwież</string>
+    <string name="settings">Ustawienia</string>
+    <string name="url">Link</string>
+</resources>
