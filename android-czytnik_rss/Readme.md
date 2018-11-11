@@ -1,8 +1,8 @@
 # CzytnikRSS
-This is simple RSS reader with auto refreshing feeds in background.
+This is a simple RSS reader. App auto refresh feeds in background. I developed this app on Android 5.0.2.
 
 ## Build
-Please find tutorial in internet how to build android app. I tested this on Android 5.0.2.
+Please find tutorial in internet how to build an android app.
 
 ## Screenshots
 ![1.png](/android-czytnik_rss/screenshots/1.png?raw=true)
