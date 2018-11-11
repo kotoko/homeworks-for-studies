@@ -1,13 +1,13 @@
 # Sikradio
 In this project I implemented simple internet radio. It is written in modern c++ (c++17).
 
-### Description
+## Description
 There are two programs `sikradio-receiver` and `sikradio-sender`. Sender reads bytes in loop from stdin until EOF. Then sends bytes as fast as possible to given multicast address. Receiver automatically discovers senders and receives bytes to buffer in memory. When buffer is 3/4 full starts writing bytes to stdout as fast as possible. If receiver would write byte that is not in buffer yet, it restarts playing (flushes buffer and waits until buffer is again 3/4 full). Receiver automatically sends requests for retransmission bytes/packets that are probably lost.
 
-### Design
+## Design
 To be added.
 
-### Build
+## Build
 Requirements:
 
 * linux
@@ -22,7 +22,7 @@ make
 ```
 It will create two executables `sikradio-receiver` and `sikradio-sender`.
 
-### Run
+## Run
 You need compiled executables `sikradio-receiver`, `sikradio-sender` and a `*.mp3` or `*.wav` file with your favourite song. Moreover you need to have [sox](http://sox.sourceforge.net) installed on your system. For convenient usage I created scripts `send.sh`, `recv.sh` to run radio.
 
 **Before running radio please double check that you allow incoming udp packets in your firewall!** For testing purposes I recommend to temporarily turn off firewall completly.
@@ -47,7 +47,7 @@ After few seconds you should hear the song.
 
 The best effect is when you run sender and receiver on two different computers connected to the same network (aka LAN).
 
-### Receiver UI
+## Receiver's UI
 `sikradio-receiver` has simple text user interface which allows you to change current playing station. You can connect to it with `telnet`. If you are using `recv.sh` then on the same computer run:
 ```
 telnet localhost 13456
