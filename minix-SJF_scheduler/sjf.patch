@@ -1,0 +1,710 @@
+diff -rupN oryginalne/usr/src/include/unistd.h zmienione/usr/src/include/unistd.h
+--- oryginalne/usr/src/include/unistd.h	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/include/unistd.h	2018-05-26 16:03:30.000000000 +0200
+@@ -411,5 +411,7 @@ extern	 int optreset;		/* getopt(3) exte
+ extern	 char *suboptarg;	/* getsubopt(3) external variable */
+ #endif
+ 
++int setsjf(int expected_time);  /* sjf_2018 */
++
+ __END_DECLS
+ #endif /* !_UNISTD_H_ */
+diff -rupN oryginalne/usr/src/lib/libc/misc/Makefile.inc zmienione/usr/src/lib/libc/misc/Makefile.inc
+--- oryginalne/usr/src/lib/libc/misc/Makefile.inc	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/lib/libc/misc/Makefile.inc	2018-05-26 16:03:30.000000000 +0200
+@@ -8,3 +8,5 @@ SRCS+=	initfini.c
+ 
+ # for -fstack-protector
+ SRCS+=	stack_protector.c
++
++SRCS+=	setsjf.c
+diff -rupN oryginalne/usr/src/lib/libc/misc/setsjf.c zmienione/usr/src/lib/libc/misc/setsjf.c
+--- oryginalne/usr/src/lib/libc/misc/setsjf.c	1970-01-01 01:00:00.000000000 +0100
++++ zmienione/usr/src/lib/libc/misc/setsjf.c	2018-05-26 15:13:51.481574343 +0200
+@@ -0,0 +1,26 @@
++#include <lib.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <sys/types.h>
++#include <unistd.h>
++#include <minix/rs.h>
++
++int get_pm_endpt(endpoint_t *pt)
++{
++	return minix_rs_lookup("pm", pt);
++}
++
++int setsjf(int expected_time)  /* sjf_2018 */
++{
++	endpoint_t pm_pt;
++	message m;
++
++	if(get_pm_endpt(&pm_pt) != 0) {
++		errno = ENOSYS;
++		return -1;
++	}
++
++	m.m_pm_setsjf.ex_time = expected_time;
++
++	return _syscall(pm_pt, PM_SETSJF, &m);  // Values: 0, -1
++}
+diff -rupN oryginalne/usr/src/minix/include/minix/callnr.h zmienione/usr/src/minix/include/minix/callnr.h
+--- oryginalne/usr/src/minix/include/minix/callnr.h	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/include/minix/callnr.h	2018-05-26 16:03:30.000000000 +0200
+@@ -58,8 +58,9 @@
+ #define PM_GETEPINFO		(PM_BASE + 45)
+ #define PM_GETPROCNR		(PM_BASE + 46)
+ #define PM_GETSYSINFO		(PM_BASE + 47)
++#define PM_SETSJF		(PM_BASE + 48)
+ 
+-#define NR_PM_CALLS		48	/* highest number from base plus one */
++#define NR_PM_CALLS		49	/* highest number from base plus one */
+ 
+ /*===========================================================================*
+  *				Calls to VFS				     *
+diff -rupN oryginalne/usr/src/minix/include/minix/com.h zmienione/usr/src/minix/include/minix/com.h
+--- oryginalne/usr/src/minix/include/minix/com.h	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/include/minix/com.h	2018-05-26 16:03:30.000000000 +0200
+@@ -763,6 +763,7 @@
+ #define SCHEDULING_STOP		(SCHEDULING_BASE+3)
+ #define SCHEDULING_SET_NICE	(SCHEDULING_BASE+4)
+ #define SCHEDULING_INHERIT	(SCHEDULING_BASE+5)
++#define SCHEDULING_SETSJF	(SCHEDULING_BASE+6)
+ 
+ /*===========================================================================*
+  *              Messages for USB                                             *
+diff -rupN oryginalne/usr/src/minix/include/minix/config.h zmienione/usr/src/minix/include/minix/config.h
+--- oryginalne/usr/src/minix/include/minix/config.h	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/include/minix/config.h	2018-05-26 16:03:30.000000000 +0200
+@@ -72,6 +72,8 @@
+ /* defualt user process cpu */
+ #define USER_DEFAULT_CPU	-1 /* use the default cpu or do not change the
+ 				      current one */
++#define SJF_Q	8
++#define MAX_SJFPRIO	100
+ 
+ /*===========================================================================*
+  *	There are no user-settable parameters after this line		     *
+diff -rupN oryginalne/usr/src/minix/include/minix/ipc.h zmienione/usr/src/minix/include/minix/ipc.h
+--- oryginalne/usr/src/minix/include/minix/ipc.h	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/include/minix/ipc.h	2018-05-26 19:59:57.412118841 +0200
+@@ -988,8 +988,9 @@ typedef struct {
+ 	int quantum;
+ 	int priority;
+ 	int cpu;
++	int32_t ex_time;
+ 
+-	uint8_t padding[40];
++	uint8_t padding[36];
+ } mess_lsys_krn_schedule;
+ _ASSERT_MSG_SIZE(mess_lsys_krn_schedule);
+ 
+@@ -1588,6 +1589,13 @@ typedef struct {
+ _ASSERT_MSG_SIZE(mess_pm_sched_scheduling_set_nice);
+ 
+ typedef struct {
++	int32_t ex_time;
++
++	uint8_t padding[52];
++} mess_pm_setsjf;
++_ASSERT_MSG_SIZE(mess_pm_setsjf);
++
++typedef struct {
+ 	int status;
+ 
+ 	uint8_t padding[52];
+@@ -1646,6 +1654,14 @@ typedef struct {
+ } mess_sched_lsys_scheduling_start;
+ _ASSERT_MSG_SIZE(mess_sched_lsys_scheduling_start);
+ 
++typedef struct {
++	endpoint_t endpoint;  /* process that want to change to/from SJF sched */
++	int32_t ex_time;
++
++	uint8_t padding[48];
++} mess_sched_setsjf;
++_ASSERT_MSG_SIZE(mess_sched_setsjf);
++
+ /* For SYS_GETKSIG, _ENDKSIG, _KILL, _SIGSEND, _SIGRETURN. */
+ typedef struct {
+ 	sigset_t map;		/* used to pass signal bit map */
+@@ -2208,6 +2224,7 @@ typedef struct {
+ 		mess_pm_lsys_getprocnr	m_pm_lsys_getprocnr;
+ 		mess_pm_lsys_sigs_signal m_pm_lsys_sigs_signal;
+ 		mess_pm_sched_scheduling_set_nice m_pm_sched_scheduling_set_nice;
++		mess_pm_setsjf m_pm_setsjf;
+ 		mess_readclock_lc_rtcdev m_readclock_lc_rtcdev;
+ 		mess_rs_init		m_rs_init;
+ 		mess_rs_pm_exec_restart	m_rs_pm_exec_restart;
+@@ -2215,6 +2232,7 @@ typedef struct {
+ 		mess_rs_req		m_rs_req;
+ 		mess_rs_update		m_rs_update;
+ 		mess_sched_lsys_scheduling_start m_sched_lsys_scheduling_start;
++		mess_sched_setsjf m_sched_setsjf;
+ 		mess_sigcalls		m_sigcalls;
+ 		mess_tty_lsys_fkey_ctl	m_tty_lsys_fkey_ctl;
+ 		mess_vfs_fs_breadwrite	m_vfs_fs_breadwrite;
+diff -rupN oryginalne/usr/src/minix/include/minix/syslib.h zmienione/usr/src/minix/include/minix/syslib.h
+--- oryginalne/usr/src/minix/include/minix/syslib.h	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/include/minix/syslib.h	2018-05-26 16:03:30.000000000 +0200
+@@ -38,7 +38,7 @@ int sys_exit(void);
+ int sys_trace(int req, endpoint_t proc_ep, long addr, long *data_p);
+ 
+ int sys_schedule(endpoint_t proc_ep, int priority, int quantum, int
+-	cpu);
++	cpu, int expected_time);
+ int sys_schedctl(unsigned flags, endpoint_t proc_ep, int priority, int
+ 	quantum, int cpu);
+ 
+diff -rupN oryginalne/usr/src/minix/kernel/proc.c zmienione/usr/src/minix/kernel/proc.c
+--- oryginalne/usr/src/minix/kernel/proc.c	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/kernel/proc.c	2018-05-26 19:52:15.662022620 +0200
+@@ -1525,7 +1525,7 @@ asyn_error:
+  *===========================================================================*/
+ void enqueue(
+   register struct proc *rp	/* this process is now runnable */
+-)
++)  /* sjf_2018 */
+ {
+ /* Add 'rp' to one of the queues of runnable processes.  This function is 
+  * responsible for inserting a process into one of the scheduling queues. 
+@@ -1537,6 +1537,7 @@ void enqueue(
+  */
+   int q = rp->p_priority;	 		/* scheduling queue to use */
+   struct proc **rdy_head, **rdy_tail;
++  struct proc *rdy_iter, *rdy_prev;
+   
+   assert(proc_is_runnable(rp));
+ 
+@@ -1551,9 +1552,38 @@ void enqueue(
+       rp->p_nextready = NULL;		/* mark new end */
+   } 
+   else {					/* add to tail of queue */
++    if (q == SJF_Q) {
++      /* Insert as first element */
++      if (rdy_head[q]->expected_time > rp->expected_time) {
++        rp->p_nextready = rdy_head[q];
++        rdy_head[q] = rp;
++      }
++      /* Insert somewhere inside */
++      else {
++        rdy_prev = rdy_head[q];
++        rdy_iter = rdy_head[q]->p_nextready;
++
++        /* Find position */
++        while(rdy_iter != NULL && rdy_iter->expected_time <= rp->expected_time) {
++          rdy_prev = rdy_prev->p_nextready;
++          rdy_iter = rdy_iter->p_nextready;
++        }
++
++        /* Insert */
++        rp->p_nextready = rdy_iter;
++        rdy_prev->p_nextready = rp;
++
++        /* Inserted as last element in queue */
++        if (rp->p_nextready == NULL) {
++          rdy_tail[q] = rp;
++        }
++      }
++	}
++    else {
+       rdy_tail[q]->p_nextready = rp;		/* chain tail of queue */	
+       rdy_tail[q] = rp;				/* set new queue tail */
+       rp->p_nextready = NULL;		/* mark new end */
++    }
+   }
+ 
+   if (cpuid == rp->p_cpu) {
+@@ -1598,11 +1628,12 @@ void enqueue(
+  * process on a run queue. We have to put this process back at the fron to be
+  * fair
+  */
+-static void enqueue_head(struct proc *rp)
++static void enqueue_head(struct proc *rp)  /* sjf_2018 */
+ {
+   const int q = rp->p_priority;	 		/* scheduling queue to use */
+ 
+   struct proc **rdy_head, **rdy_tail;
++  struct proc *rdy_iter, *rdy_prev;
+ 
+   assert(proc_ptr_ok(rp));
+   assert(proc_is_runnable(rp));
+@@ -1623,9 +1654,39 @@ static void enqueue_head(struct proc *rp
+   if (!rdy_head[q]) {		/* add to empty queue */
+ 	rdy_head[q] = rdy_tail[q] = rp; 	/* create a new queue */
+ 	rp->p_nextready = NULL;			/* mark new end */
+-  } else {					/* add to head of queue */
+-	rp->p_nextready = rdy_head[q];		/* chain head of queue */
+-	rdy_head[q] = rp;			/* set new queue head */
++  }
++  else {					/* add to head of queue */
++    if(q == SJF_Q) {
++      /* Insert as first element */
++      if (rdy_head[q]->expected_time > rp->expected_time) {
++        rp->p_nextready = rdy_head[q];
++        rdy_head[q] = rp;
++      }
++      /* Insert somewhere inside */
++      else {
++        rdy_prev = rdy_head[q];
++        rdy_iter = rdy_head[q]->p_nextready;
++
++        /* Find position */
++        while(rdy_iter != NULL && rdy_iter->expected_time <= rp->expected_time) {
++          rdy_prev = rdy_prev->p_nextready;
++          rdy_iter = rdy_iter->p_nextready;
++        }
++
++        /* Insert */
++        rp->p_nextready = rdy_iter;
++        rdy_prev->p_nextready = rp;
++
++        /* Inserted as last element in queue */
++        if (rp->p_nextready == NULL) {
++          rdy_tail[q] = rp;
++        }
++      }
++    }
++    else {
++	  rp->p_nextready = rdy_head[q];		/* chain head of queue */
++	  rdy_head[q] = rp;			/* set new queue head */
++    }
+   }
+ 
+   /* Make note of when this process was added to queue */
+diff -rupN oryginalne/usr/src/minix/kernel/proc.h zmienione/usr/src/minix/kernel/proc.h
+--- oryginalne/usr/src/minix/kernel/proc.h	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/kernel/proc.h	2018-05-26 16:03:30.000000000 +0200
+@@ -131,6 +131,8 @@ struct proc {
+ #if DEBUG_TRACE
+   int p_schedules;
+ #endif
++
++  int expected_time;  /* Order in SJF queue */
+ };
+ 
+ #endif /* __ASSEMBLY__ */
+diff -rupN oryginalne/usr/src/minix/kernel/proto.h zmienione/usr/src/minix/kernel/proto.h
+--- oryginalne/usr/src/minix/kernel/proto.h	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/kernel/proto.h	2018-05-26 16:18:40.000000000 +0200
+@@ -99,7 +99,7 @@ void system_init(void);
+ void clear_endpoint(struct proc *rc);
+ void clear_ipc_refs(struct proc *rc, int caller_ret);
+ void kernel_call_resume(struct proc *p);
+-int sched_proc(struct proc *rp, int priority, int quantum, int cpu);
++int sched_proc(struct proc *rp, int priority, int quantum, int cpu, int expected_time);
+ 
+ /* system/do_vtimer.c */
+ void vtimer_check(struct proc *rp);
+diff -rupN oryginalne/usr/src/minix/kernel/system/do_schedctl.c zmienione/usr/src/minix/kernel/system/do_schedctl.c
+--- oryginalne/usr/src/minix/kernel/system/do_schedctl.c	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/kernel/system/do_schedctl.c	2018-05-26 16:21:02.000000000 +0200
+@@ -4,7 +4,7 @@
+ /*===========================================================================*
+  *			          do_schedctl			     *
+  *===========================================================================*/
+-int do_schedctl(struct proc * caller, message * m_ptr)
++int do_schedctl(struct proc * caller, message * m_ptr)  /* sjf_2018 */
+ {
+ 	struct proc *p;
+ 	uint32_t flags;
+@@ -34,7 +34,7 @@ int do_schedctl(struct proc * caller, me
+ 		cpu = m_ptr->m_lsys_krn_schedctl.cpu;
+ 
+ 		/* Try to schedule the process. */
+-		if((r = sched_proc(p, priority, quantum, cpu) != OK))
++		if((r = sched_proc(p, priority, quantum, cpu, 0) != OK))
+ 			return r;
+ 		p->p_scheduler = NULL;
+ 	} else {
+diff -rupN oryginalne/usr/src/minix/kernel/system/do_schedule.c zmienione/usr/src/minix/kernel/system/do_schedule.c
+--- oryginalne/usr/src/minix/kernel/system/do_schedule.c	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/kernel/system/do_schedule.c	2018-05-26 19:56:24.691299300 +0200
+@@ -5,11 +5,11 @@
+ /*===========================================================================*
+  *				do_schedule				     *
+  *===========================================================================*/
+-int do_schedule(struct proc * caller, message * m_ptr)
++int do_schedule(struct proc * caller, message * m_ptr)  /* sjf_2018 */
+ {
+ 	struct proc *p;
+ 	int proc_nr;
+-	int priority, quantum, cpu;
++	int priority, quantum, cpu, expected_time;
+ 
+ 	if (!isokendpt(m_ptr->m_lsys_krn_schedule.endpoint, &proc_nr))
+ 		return EINVAL;
+@@ -24,6 +24,7 @@ int do_schedule(struct proc * caller, me
+ 	priority = m_ptr->m_lsys_krn_schedule.priority;
+ 	quantum = m_ptr->m_lsys_krn_schedule.quantum;
+ 	cpu = m_ptr->m_lsys_krn_schedule.cpu;
++	expected_time = m_ptr->m_lsys_krn_schedule.ex_time;
+ 
+-	return sched_proc(p, priority, quantum, cpu);
++	return sched_proc(p, priority, quantum, cpu, expected_time);
+ }
+diff -rupN oryginalne/usr/src/minix/kernel/system.c zmienione/usr/src/minix/kernel/system.c
+--- oryginalne/usr/src/minix/kernel/system.c	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/kernel/system.c	2018-05-26 19:54:35.382933605 +0200
+@@ -621,7 +621,8 @@ void kernel_call_resume(struct proc *cal
+ int sched_proc(struct proc *p,
+ 			int priority,
+ 			int quantum,
+-			int cpu)
++			int cpu,
++			int expected_time)  /* sjf_2018 */
+ {
+ 	/* Make sure the values given are within the allowed range.*/
+ 	if ((priority < TASK_Q && priority != -1) || priority > NR_SCHED_QUEUES)
+@@ -669,6 +670,7 @@ int sched_proc(struct proc *p,
+ 	if (cpu != -1)
+ 		p->p_cpu = cpu;
+ #endif
++	p->expected_time = expected_time;
+ 
+ 	/* Clear the scheduling bit and enqueue the process */
+ 	RTS_UNSET(p, RTS_NO_QUANTUM);
+diff -rupN oryginalne/usr/src/minix/lib/libsys/sys_schedule.c zmienione/usr/src/minix/lib/libsys/sys_schedule.c
+--- oryginalne/usr/src/minix/lib/libsys/sys_schedule.c	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/lib/libsys/sys_schedule.c	2018-05-26 19:43:28.751900624 +0200
+@@ -3,7 +3,8 @@
+ int sys_schedule(endpoint_t proc_ep,
+ 			int priority,
+ 			int quantum,
+-			int cpu)
++			int cpu,
++			int expected_time)  /* sjf_2018 */
+ {
+ 	message m;
+ 
+@@ -11,5 +12,7 @@ int sys_schedule(endpoint_t proc_ep,
+ 	m.m_lsys_krn_schedule.priority = priority;
+ 	m.m_lsys_krn_schedule.quantum  = quantum;
+ 	m.m_lsys_krn_schedule.cpu = cpu;
++	m.m_lsys_krn_schedule.ex_time = expected_time;
++
+ 	return(_kernel_call(SYS_SCHEDULE, &m));
+ }
+diff -rupN oryginalne/usr/src/minix/servers/pm/Makefile zmienione/usr/src/minix/servers/pm/Makefile
+--- oryginalne/usr/src/minix/servers/pm/Makefile	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/servers/pm/Makefile	2018-05-26 16:03:30.000000000 +0200
+@@ -4,7 +4,7 @@
+ PROG=	pm
+ SRCS=	main.c forkexit.c exec.c time.c alarm.c \
+ 	signal.c utility.c table.c trace.c getset.c misc.c \
+-	profile.c mcontext.c schedule.c
++	profile.c mcontext.c schedule.c setsjf.c
+ 
+ DPADD+=	${LIBSYS} ${LIBTIMERS}
+ LDADD+=	-lsys -ltimers
+diff -rupN oryginalne/usr/src/minix/servers/pm/proto.h zmienione/usr/src/minix/servers/pm/proto.h
+--- oryginalne/usr/src/minix/servers/pm/proto.h	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/servers/pm/proto.h	2018-05-26 16:03:30.000000000 +0200
+@@ -89,3 +89,6 @@ struct mproc *find_proc(pid_t lpid);
+ int nice_to_priority(int nice, unsigned *new_q);
+ int pm_isokendpt(int ep, int *proc);
+ void tell_vfs(struct mproc *rmp, message *m_ptr);
++
++/* setsjf.c */
++int do_setsjf();  /* sjf_2018 */
+diff -rupN oryginalne/usr/src/minix/servers/pm/setsjf.c zmienione/usr/src/minix/servers/pm/setsjf.c
+--- oryginalne/usr/src/minix/servers/pm/setsjf.c	1970-01-01 01:00:00.000000000 +0100
++++ zmienione/usr/src/minix/servers/pm/setsjf.c	2018-05-26 17:18:48.256487608 +0200
+@@ -0,0 +1,20 @@
++#include "pm.h"
++#include "mproc.h"
++#include <stdlib.h>
++
++int do_setsjf()
++{
++	message m;
++
++	m.m_sched_setsjf.endpoint = m_in.m_source;
++	m.m_sched_setsjf.ex_time = m_in.m_pm_setsjf.ex_time;
++
++	int rv;
++	int nr_proc;
++
++	if ((rv = pm_isokendpt(m.m_sched_setsjf.endpoint, &nr_proc)) != OK) {
++		return rv;
++	}
++
++	return  _taskcall(mproc[nr_proc].mp_scheduler, SCHEDULING_SETSJF, &m);
++}
+diff -rupN oryginalne/usr/src/minix/servers/pm/table.c zmienione/usr/src/minix/servers/pm/table.c
+--- oryginalne/usr/src/minix/servers/pm/table.c	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/servers/pm/table.c	2018-05-26 16:03:30.000000000 +0200
+@@ -58,5 +58,6 @@ int (* const call_vec[NR_PM_CALLS])(void
+ 	CALL(PM_EXEC_RESTART)	= do_execrestart,
+ 	CALL(PM_GETEPINFO)	= do_getepinfo,		/* getepinfo(2) */
+ 	CALL(PM_GETPROCNR)	= do_getprocnr,		/* getprocnr(2) */
+-	CALL(PM_GETSYSINFO)	= do_getsysinfo		/* getsysinfo(2) */
++	CALL(PM_GETSYSINFO)	= do_getsysinfo,		/* getsysinfo(2) */
++	CALL(PM_SETSJF)	= do_setsjf
+ };
+diff -rupN oryginalne/usr/src/minix/servers/sched/main.c zmienione/usr/src/minix/servers/sched/main.c
+--- oryginalne/usr/src/minix/servers/sched/main.c	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/servers/sched/main.c	2018-05-26 16:03:30.000000000 +0200
+@@ -18,7 +18,7 @@ struct machine machine;		/* machine info
+ /*===========================================================================*
+  *				main					     *
+  *===========================================================================*/
+-int main(void)
++int main(void)  /* sjf_2018 */
+ {
+ 	/* Main routine of the scheduler. */
+ 	message m_in;	/* the incoming message itself is kept here. */
+@@ -87,6 +87,9 @@ int main(void)
+ 				result = EPERM;
+ 			}
+ 			break;
++		case SCHEDULING_SETSJF:
++			result = do_setsjf(&m_in);
++			break;
+ 		default:
+ 			result = no_sys(who_e, call_nr);
+ 		}
+diff -rupN oryginalne/usr/src/minix/servers/sched/proto.h zmienione/usr/src/minix/servers/sched/proto.h
+--- oryginalne/usr/src/minix/servers/sched/proto.h	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/servers/sched/proto.h	2018-05-26 16:03:30.000000000 +0200
+@@ -13,6 +13,7 @@ int do_start_scheduling(message *m_ptr);
+ int do_stop_scheduling(message *m_ptr);
+ int do_nice(message *m_ptr);
+ void init_scheduling(void);
++int do_setsjf(message *m_ptr);
+ 
+ /* utility.c */
+ int no_sys(int who_e, int call_nr);
+diff -rupN oryginalne/usr/src/minix/servers/sched/schedproc.h zmienione/usr/src/minix/servers/sched/schedproc.h
+--- oryginalne/usr/src/minix/servers/sched/schedproc.h	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/servers/sched/schedproc.h	2018-05-26 16:03:30.000000000 +0200
+@@ -33,6 +33,7 @@ EXTERN struct schedproc {
+ 	bitchunk_t cpu_mask[BITMAP_CHUNKS(CONFIG_MAX_CPUS)]; /* what CPUs is the
+ 								process allowed
+ 								to run on */
++	unsigned expected_time;	/* expected time used in SJF queue */
+ } schedproc[NR_PROCS];
+ 
+ /* Flag values */
+diff -rupN oryginalne/usr/src/minix/servers/sched/schedule.c zmienione/usr/src/minix/servers/sched/schedule.c
+--- oryginalne/usr/src/minix/servers/sched/schedule.c	2014-09-13 23:56:50.000000000 +0200
++++ zmienione/usr/src/minix/servers/sched/schedule.c	2018-05-26 19:57:14.558553720 +0200
+@@ -87,7 +87,7 @@ static void pick_cpu(struct schedproc *
+  *				do_noquantum				     *
+  *===========================================================================*/
+ 
+-int do_noquantum(message *m_ptr)
++int do_noquantum(message *m_ptr)  /* sjf_2018 */
+ {
+ 	register struct schedproc *rmp;
+ 	int rv, proc_nr_n;
+@@ -99,8 +99,19 @@ int do_noquantum(message *m_ptr)
+ 	}
+ 
+ 	rmp = &schedproc[proc_nr_n];
+-	if (rmp->priority < MIN_USER_Q) {
+-		rmp->priority += 1; /* lower priority */
++	if (rmp->priority != SJF_Q) {
++		if (rmp->priority < MIN_USER_Q) {
++			rmp->priority += 1; /* lower priority */
++
++			if (rmp->priority == SJF_Q) {
++				if (rmp->priority < MIN_USER_Q) {
++					rmp->priority += 1; /* lower priority again */
++				}
++				else {
++					rmp->priority -= 1; /* restore priority */
++				}
++			}
++		}
+ 	}
+ 
+ 	if ((rv = schedule_process_local(rmp)) != OK) {
+@@ -140,7 +151,7 @@ int do_stop_scheduling(message *m_ptr)
+ /*===========================================================================*
+  *				do_start_scheduling			     *
+  *===========================================================================*/
+-int do_start_scheduling(message *m_ptr)
++int do_start_scheduling(message *m_ptr)  /* sjf_2018 */
+ {
+ 	register struct schedproc *rmp;
+ 	int rv, proc_nr_n, parent_nr_n;
+@@ -196,7 +207,17 @@ int do_start_scheduling(message *m_ptr)
+ 		 * quanum and priority are set explicitly rather than inherited 
+ 		 * from the parent */
+ 		rmp->priority   = rmp->max_priority;
++		if (rmp->priority == SJF_Q) {
++			if(rmp->priority + 1 < NR_SCHED_QUEUES) {
++				rmp->priority += 1;  /* decrease priority */
++			}
++			else {
++				rmp->priority -= 1;  /* increase priority */
++			}
++		}
++
+ 		rmp->time_slice = m_ptr->m_lsys_sched_scheduling_start.quantum;
++		rmp->expected_time	= 0;
+ 		break;
+ 		
+ 	case SCHEDULING_INHERIT:
+@@ -209,6 +230,7 @@ int do_start_scheduling(message *m_ptr)
+ 
+ 		rmp->priority = schedproc[parent_nr_n].priority;
+ 		rmp->time_slice = schedproc[parent_nr_n].time_slice;
++		rmp->expected_time	= schedproc[parent_nr_n].expected_time;
+ 		break;
+ 		
+ 	default: 
+@@ -254,7 +276,7 @@ int do_start_scheduling(message *m_ptr)
+ /*===========================================================================*
+  *				do_nice					     *
+  *===========================================================================*/
+-int do_nice(message *m_ptr)
++int do_nice(message *m_ptr)  /* sjf_2018 */
+ {
+ 	struct schedproc *rmp;
+ 	int rv;
+@@ -281,6 +303,16 @@ int do_nice(message *m_ptr)
+ 	old_q     = rmp->priority;
+ 	old_max_q = rmp->max_priority;
+ 
++	/* Forbid getting out of SJF queue */
++	if (old_q == SJF_Q && new_q != SJF_Q) {
++		return EPERM;
++	}
++
++	/* Forbid getting into SJF queue */
++	if (old_q != SJF_Q && new_q == SJF_Q) {
++		return EPERM;
++	}
++
+ 	/* Update the proc entry and reschedule the process */
+ 	rmp->max_priority = rmp->priority = new_q;
+ 
+@@ -297,7 +329,7 @@ int do_nice(message *m_ptr)
+ /*===========================================================================*
+  *				schedule_process			     *
+  *===========================================================================*/
+-static int schedule_process(struct schedproc * rmp, unsigned flags)
++static int schedule_process(struct schedproc * rmp, unsigned flags)  /* sjf_2018 */
+ {
+ 	int err;
+ 	int new_prio, new_quantum, new_cpu;
+@@ -320,7 +352,7 @@ static int schedule_process(struct sched
+ 		new_cpu = -1;
+ 
+ 	if ((err = sys_schedule(rmp->endpoint, new_prio,
+-		new_quantum, new_cpu)) != OK) {
++		new_quantum, new_cpu, rmp->expected_time)) != OK) {
+ 		printf("PM: An error occurred when trying to schedule %d: %d\n",
+ 		rmp->endpoint, err);
+ 	}
+@@ -349,19 +381,104 @@ void init_scheduling(void)
+  * quantum. This function will find all proccesses that have been bumped down,
+  * and pulls them back up. This default policy will soon be changed.
+  */
+-static void balance_queues(minix_timer_t *tp)
++static void balance_queues(minix_timer_t *tp)  /* sjf_2018 */
+ {
+ 	struct schedproc *rmp;
+ 	int proc_nr;
+ 
+ 	for (proc_nr=0, rmp=schedproc; proc_nr < NR_PROCS; proc_nr++, rmp++) {
+ 		if (rmp->flags & IN_USE) {
+-			if (rmp->priority > rmp->max_priority) {
+-				rmp->priority -= 1; /* increase priority */
+-				schedule_process_local(rmp);
++			if (rmp->priority != SJF_Q) {
++				if (rmp->priority > rmp->max_priority) {
++					rmp->priority -= 1; /* increase priority */
++
++					if (rmp->priority == SJF_Q) {
++						if (rmp->priority > rmp->max_priority) {
++							rmp->priority -= 1; /* increase priority again */
++						}
++						else {
++							rmp->priority += 1; /* restore priority */
++						}
++					}
++
++					schedule_process_local(rmp);
++				}
+ 			}
+ 		}
+ 	}
+ 
+ 	set_timer(&sched_timer, balance_timeout, balance_queues, 0);
+ }
++
++/*===========================================================================*
++ *				setsjf        				     *
++ *===========================================================================*/
++int do_setsjf(message *m_ptr)  /* sjf_2018 */
++{
++	register struct schedproc *rmp;
++	int proc_nr_n, new_ex_time, rv, old_q, old_ex_time;
++
++	assert(m_ptr->m_type == SCHEDULING_SETSJF);
++
++	/* Check who can send you requests */
++	if (!accept_message(m_ptr)) {
++		return EPERM;
++	}
++
++	new_ex_time = m_ptr->m_sched_setsjf.ex_time;
++
++	/* Negative or too big time is forbidden */
++	if (new_ex_time < 0 || new_ex_time > MAX_SJFPRIO) {
++		return EINVAL;
++	}
++
++	/* Resolve endpoint to proc slot */
++	if (sched_isokendpt(m_ptr->m_sched_setsjf.endpoint, &proc_nr_n) != OK) {
++		printf("SCHED: WARNING: got an invalid endpoint in sched_setsjf msg "
++		"%d\n", m_ptr->m_sched_setsjf.endpoint);
++		return EBADEPT;
++	}
++
++	rmp = &schedproc[proc_nr_n];
++
++	/* Forbid changing from SJF to SJF */
++	if (rmp->priority == SJF_Q && new_ex_time > 0) {
++		return EPERM;
++	}
++
++	/* Do nothing for changing from non-SJF to non-SJF */
++	if (rmp->priority != SJF_Q && new_ex_time == 0) {
++		return OK;
++	}
++
++	/* Store old values, in case we need to roll back the changes */
++	old_q       = rmp->priority;
++	old_ex_time = rmp->expected_time;
++
++	/* Update the proc entry and reschedule the process */
++	rmp->expected_time = new_ex_time;
++	if (new_ex_time == 0) {
++		rmp->priority = rmp->max_priority;
++
++		if (rmp->priority == SJF_Q) {
++			if(rmp->priority < MIN_USER_Q) {
++				rmp->priority += 1;  /* decrease priority */
++			}
++			else {
++				rmp->priority -= 1;  /* increase priority */
++			}
++		}
++	}
++	else {
++		rmp->priority = SJF_Q;
++	}
++
++	if ((rv = schedule_process(rmp, SCHEDULE_CHANGE_PRIO)) != OK) {
++		/* Something went wrong when rescheduling the process, roll
++		 * back the changes to proc struct */
++		rmp->priority      = old_q;
++		rmp->expected_time = old_ex_time;
++	}
++
++	return rv;
++}
