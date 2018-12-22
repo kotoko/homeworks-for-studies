@@ -2,7 +2,7 @@
 In this project I implemented shortest job first scheduler for minix. It is written in C. Code is in the format of a patch to be applied onto the minix source code.
 
 ## Description
-SJF is a (well-known scheduling policy)[https://en.wikipedia.org/wiki/Shortest_job_next]. This is preemptive version of SJF. Queue `SJF_Q = 8` in minix has different behaviuor then the rest. By default programs are **not** in SJF queue and can not get there unless they make explicit syscall.
+SJF is a [well-known scheduling policy](https://en.wikipedia.org/wiki/Shortest_job_next). This is preemptive version of SJF. Queue `SJF_Q = 8` in minix has different behaviuor then the rest. By default programs are **not** in SJF queue and can not get there unless they make explicit syscall.
 
 ## Build
 Requirements:
@@ -58,4 +58,4 @@ Program written in C should include library `unistd.h`.
 If program wants to change its own scheduler policy, it can call function `int setsjf(int expected_time)`. `expected_time` must be `0 <= expected_time <= MAX_SJFPRIO=100`.
 
 * If `expected_time` is equall to `0`, that means that process wants to switch to default minix's scheduling policy.
-* If `expected_time` is not equall to `0`, that means that process wants to switch to SJF schedulinug policy and `expected_time` is an expected time of execution.
+* If `expected_time` is not equall to `0`, that means that process wants to switch to SJF scheduling policy and `expected_time` is an expected time of execution.
