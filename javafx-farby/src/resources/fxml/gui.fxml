@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane id="main" fx:id="main" prefHeight="400.0" prefWidth="600.0" stylesheets="/css/gui.css" xmlns="http://javafx.com/javafx/8.0.131" xmlns:fx="http://javafx.com/fxml/1" fx:controller="mixingmachine.controler.MyGuiControler">
+   <children>
+      <HBox AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+         <children>
+            <VBox id="firstColumn" fx:id="firstColumn" prefHeight="${main.height}" prefWidth="${main.width*0.33}">
+               <children>
+                  <Label id="labelPaints" fx:id="labelPaints" prefHeight="15" prefWidth="${firstColumn.width}" text="Farby" />
+                   <Region id="region1-1" prefHeight="10.0" prefWidth="${firstColumn.width}" />
+                   <ListView id="listPaints" fx:id="listPaints" prefHeight="${firstColumn.height-65}" prefWidth="${firstColumn.width}" />
+                  <Region id="region1-2" prefHeight="20.0" prefWidth="${firstColumn.width}" />
+                  <Button fx:id="buttonAddPaint" mnemonicParsing="false" prefHeight="20" prefWidth="${firstColumn.width}" text="Dodaj farbę" />
+               </children></VBox>
+            <Region id="region1" prefHeight="${main.width}" prefWidth="40.0" />
+            <VBox id="secondColumn" fx:id="secondColumn" prefHeight="${main.height}" prefWidth="${main.width*0.33}">
+               <children>
+                  <Label id="labelPigments" fx:id="labelPigments" prefHeight="15" prefWidth="${secondColumn.width}" text="Pigmenty" />
+                   <Region id="region2-1" prefHeight="10.0" prefWidth="${firstColumn.width}" />
+                  <ListView id="listPigments" fx:id="listPigments" prefHeight="${firstColumn.height-105}" prefWidth="${secondColumn.width}" />
+                  <Region id="region2-2" prefHeight="20.0" prefWidth="${secondColumn.width}" />
+                  <Button id="buttonUsePigment" fx:id="buttonUsePigment" disable="true" mnemonicParsing="false" prefHeight="20" prefWidth="${secondColumn.width}" text="Użyj pigmentu" />
+                  <Region id="region2-3" prefHeight="20.0" prefWidth="${secondColumn.width}" />
+                  <Button id="buttonAddPigment" fx:id="buttonAddPigment" mnemonicParsing="false" prefHeight="20" prefWidth="${secondColumn.width}" text="Dodaj pigment" />
+               </children></VBox>
+             <Region id="region2" prefHeight="${main.width}" prefWidth="40.0" />
+            <VBox id="thirdColumn" fx:id="thirdColumn" prefHeight="${main.height}" prefWidth="${main.width*0.33}">
+               <children>
+                  <Label id="labelPaintSelected" fx:id="labelPaintSelected" prefHeight="15" prefWidth="${thirdColumn.width}" text="Zaznaczona farba" />
+                  <GridPane>
+                    <columnConstraints>
+                      <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="${thirdColumn.width*0.40}" />
+                      <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="${thirdColumn.width*0.60}" />
+                    </columnConstraints>
+                    <rowConstraints>
+                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                        <RowConstraints />
+                    </rowConstraints>
+                     <children>
+                        <Label id="labelPaintName" fx:id="labelPaintName" text="Nazwa" />
+                        <Label id="labelPaintToxicity" fx:id="labelPaintToxicity" text="Toksyczność" GridPane.rowIndex="1" />
+                        <Label id="labelPaintQuality" fx:id="labelPaintQuality" text="Jakość" GridPane.rowIndex="2" />
+                        <TextField id="textFieldPaintName" fx:id="textFieldPaintName" editable="false" GridPane.columnIndex="1" />
+                        <TextField id="textFieldPaintToxicity" fx:id="textFieldPaintToxicity" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                        <TextField id="textFieldPaintQuality" fx:id="textFieldPaintQuality" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                     </children>
+                  </GridPane>
+                  <Region id="region3-1" prefHeight="30.0" prefWidth="${thirdColumn.width}" />
+                  <Label id="labelPigmentSelected" fx:id="labelPigmentSelected" prefHeight="15" prefWidth="${thirdColumn.width}" text="Zaznaczony pigment" />
+                  <GridPane>
+                    <columnConstraints>
+                      <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="${thirdColumn.width*0.40}" />
+                      <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="${thirdColumn.width*0.60}" />
+                    </columnConstraints>
+                    <rowConstraints>
+                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                    </rowConstraints>
+                     <children>
+                         <Label id="labelPigmentName" fx:id="labelPigmentName" text="Nazwa" />
+                        <Label id="labelPigmentFromColor" fx:id="labelPigmentFromColor" text="Początkowy kolor" GridPane.rowIndex="1" />
+                        <Label id="labelPigmentToColor" fx:id="labelPigmentToColor" text="Końcowy kolor" GridPane.rowIndex="2" />
+                        <Label id="labelPigmentToxicityValue" fx:id="labelPigmentToxicityType" text="Typ toksyczności" GridPane.rowIndex="3" />
+                        <Label id="labelPigmentToxicityValue" fx:id="labelPigmentToxicityValue" text="Toksyczność" GridPane.rowIndex="4" />
+                         <Label id="labelPigmentQualityType" fx:id="labelPigmentQualityType" text="Typ jakości" GridPane.rowIndex="5" />
+                         <Label id="labelPigmentQualityValue" fx:id="labelPigmentQualityValue" text="Jakość" GridPane.rowIndex="6" />
+                        <TextField id="textFieldPigmentName" fx:id="textFieldPigmentName" editable="false" GridPane.columnIndex="1" />
+                         <TextField id="textFieldPigmentBeginPaint" fx:id="textFieldPigmentBeginPaint" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                        <TextField id="textFieldPigmentEndPaint" fx:id="textFieldPigmentEndPaint" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                        <ChoiceBox id="choiceBoxPigmentToxicityType" fx:id="choiceBoxPigmentToxicityType" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                        <TextField id="textFieldPigmentValue" fx:id="textFieldPigmentToxicityValue" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                         <ChoiceBox id="choiceBoxPigmentQualityType" fx:id="choiceBoxPigmentQualityType" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+                         <TextField id="textFieldPigmentQualityValue" fx:id="textFieldPigmentQualityValue" GridPane.columnIndex="1" GridPane.rowIndex="6" />
+                     </children>
+                  </GridPane>
+                  <Region id="region3-2" prefHeight="${thirdColumn.height-365}" prefWidth="${thirdColumn.width}" />
+                  <Button fx:id="buttonStartxMixing" mnemonicParsing="false" prefHeight="20" prefWidth="${thirdColumn.width}" text="Mieszaj" />
+               </children></VBox>
+         </children></HBox>
+   </children>
+</AnchorPane>

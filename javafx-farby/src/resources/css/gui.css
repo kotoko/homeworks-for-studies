@@ -1,0 +1,12 @@
+#main{
+    -fx-background-color: #f0f0f0;
+    -fx-padding: 20;
+}
+
+#labelPaints, #labelPigments, #labelPaintSelected, #labelPigmentSelected {
+    -fx-font-weight: bold;
+}
+
+#textFieldPaintName, #textFieldPigmentName {
+    -fx-background-color: lightgrey;
+}
