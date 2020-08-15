@@ -1,0 +1,6 @@
+[hadoop_master]
+10.0.0.1
+
+[hadoop_slaves]
+10.0.0.2
+10.0.0.3

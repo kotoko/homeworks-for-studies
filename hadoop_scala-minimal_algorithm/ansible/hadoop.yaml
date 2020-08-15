@@ -1,0 +1,241 @@
+- hosts: all
+# Config
+  pre_tasks:
+    - name: 'Define variables'
+      tags: always
+      set_fact:
+        hadoop_archive: 'hadoop-2.10.0.tar.xz'
+        hadoop_url: 'http://XXXXX/hadoop-2.10.0.tar.xz'  # https://ftp.ps.pl/pub/apache/hadoop/common/hadoop-2.10.0/hadoop-2.10.0.tar.gz
+        java_archive: 'jdk-8u241-linux-x64.tar.xz'
+        java_url: 'http://XXXXX/jdk-8u241-linux-x64.tar.xz'  # getting oracle's jdk binary is pain :(
+        spark_archive: 'spark-2.4.5-bin-without-hadoop-scala-2.12.tar.xz'
+        spark_url: 'http://XXXXX/spark-2.4.5-bin-without-hadoop-scala-2.12.tar.xz'  # https://archive.apache.org/dist/spark/spark-2.4.5/spark-2.4.5-bin-without-hadoop-scala-2.12.tgz
+        cluster_dir: '/tmp/kotoko/pdd'
+        hadoop_dir: '/tmp/kotoko/pdd/hadoop-bin'
+        java_dir: '/tmp/kotoko/pdd/java-jdk-bin'
+        spark_dir: '/tmp/kotoko/pdd/spark-bin'
+        hadoop_tmp: '/tmp'
+        spark_tmp: '/tmp'
+        user: 'kotoko'
+        group: 'inf'
+        master: '{{ groups.hadoop_master[0] }}'
+        slaves: '{{ groups.hadoop_slaves }}'
+  tasks:
+# Cleanup
+    - name: 'Remove directory "{{ cluster_dir }}"'
+      tags:
+        - clean
+      file:
+        path: '{{ cluster_dir }}'
+        state: absent
+    - name: 'Remove directory "{{ hadoop_tmp }}/hadoop-{{ user }}"'
+      tags:
+        - clean
+      file:
+        path: '{{ hadoop_tmp }}/hadoop-{{ user }}'
+        state: absent
+    - name: 'Remove directory "{{ hadoop_tmp }}/hadoop"'
+      tags:
+        - clean
+      file:
+        path: '{{ hadoop_tmp }}/hadoop'
+        state: absent
+    - name: 'Remove directory "{{ hadoop_tmp }}/.hdfs-nfs"'
+      tags:
+        - clean
+      file:
+        path: '{{ hadoop_tmp }}/.hdfs-nfs'
+        state: absent
+    - name: 'Remove directory "/tmp_local/spark-job-answer-{{ user }}"'
+      tags:
+        - clean
+      file:
+        path: '/tmp_local/spark-job-answer-{{ user }}'
+        state: absent
+# Setup hadoop
+    - name: 'Create directory "{{ cluster_dir }}"'
+      tags:
+        - setup
+        - download
+      file:
+        path: '{{ cluster_dir }}'
+        owner: '{{ user }}'
+        group: '{{ group }}'
+        mode: 0755
+        state: directory
+    - name: 'Download "{{ hadoop_url }}.zsync"'
+      tags:
+        - setup
+        - download
+      #~ get_url:
+        #~ url: '{{ hadoop_url }}'
+        #~ dest: '{{ cluster_dir }}/{{ hadoop_archive }}'
+      shell:
+        cmd: 'cd "{{ cluster_dir }}" && zsync -q "{{ hadoop_url }}.zsync" -o "{{ hadoop_archive }}"'
+    - name: 'Download "{{ java_url }}.zsync"'
+      tags:
+        - setup
+        - download
+      #~ get_url:
+        #~ url: '{{ java_url }}'
+        #~ dest: '{{ cluster_dir }}/{{ java_archive }}'
+      shell:
+        cmd: 'cd "{{ cluster_dir }}" && zsync -q "{{ java_url }}.zsync" -o "{{ java_archive }}"'
+    - name: 'Download "{{ spark_url }}.zsync"'
+      tags:
+        - setup
+        - download
+      #~ get_url:
+        #~ url: '{{ spark_url }}'
+        #~ dest: '{{ cluster_dir }}/{{ spark_archive }}'
+      shell:
+        cmd: 'cd "{{ cluster_dir }}" && zsync -q "{{ spark_url }}.zsync" -o "{{ spark_archive }}"'
+    - name: 'Create directory "{{ hadoop_dir }}"'
+      tags:
+        - setup
+      file:
+        path: '{{ hadoop_dir }}'
+        owner: '{{ user }}'
+        group: '{{ group }}'
+        mode: 0755
+        state: directory
+    - name: 'Unpack hadoop'
+      tags:
+        - setup
+      shell:
+        cmd: 'xz -dcv -T0 "{{ cluster_dir }}/{{ hadoop_archive }}" | tar -xf - --strip-components=1 -C "{{ hadoop_dir }}"'
+    - name: 'Create directory "{{ java_dir }}"'
+      tags:
+        - setup
+      file:
+        path: '{{ java_dir }}'
+        owner: '{{ user }}'
+        group: '{{ group }}'
+        mode: 0755
+        state: directory
+    - name: 'Unpack java'
+      tags:
+        - setup
+      shell:
+        cmd: 'xz -dcv -T0 "{{ cluster_dir }}/{{ java_archive }}" | tar -xf - --strip-components=1 -C "{{ java_dir }}"'
+    - name: 'Create directory "{{ spark_dir }}"'
+      tags:
+        - setup
+      file:
+        path: '{{ spark_dir }}'
+        owner: '{{ user }}'
+        group: '{{ group }}'
+        mode: 0755
+        state: directory
+    - name: 'Unpack spark'
+      tags:
+        - setup
+      shell:
+        cmd: 'xz -dcv -T0 "{{ cluster_dir }}/{{ spark_archive }}" | tar -xf - --strip-components=1 -C "{{ spark_dir }}"'
+    - name: 'Create directory "{{ hadoop_dir }}/namenode"'
+      tags:
+        - setup
+      file:
+        path: '{{ hadoop_dir }}/namenode'
+        owner: '{{ user }}'
+        group: '{{ group }}'
+        mode: 0755
+        state: directory
+    - name: 'Create directory "{{ hadoop_dir }}/cluster"'
+      tags:
+        - setup
+      file:
+        path: '{{ hadoop_dir }}/cluster'
+        owner: '{{ user }}'
+        group: '{{ group }}'
+        mode: 0755
+        state: directory
+    - name: 'Create directory "{{ hadoop_dir }}/SortAvroRecord"'
+      tags:
+        - setup
+      file:
+        path: '{{ hadoop_dir }}/SortAvroRecord'
+        owner: '{{ user }}'
+        group: '{{ group }}'
+        mode: 0755
+        state: directory
+    - name: 'Update file "{{ hadoop_dir }}/etc/hadoop/slaves"'
+      tags:
+        - setup
+      copy:
+        dest: '{{ hadoop_dir }}/etc/hadoop/slaves'
+        content:
+          '{% for ip in slaves %}
+          {{ ip }}
+          {% endfor %}'
+    - name: 'Update file "{{ hadoop_dir }}/etc/hadoop/hadoop-env.sh"'
+      tags:
+        - setup
+      shell: 'sed -i -e "s|^export JAVA_HOME=\${JAVA_HOME}|export JAVA_HOME={{ java_dir }}|g" "{{ hadoop_dir }}/etc/hadoop/hadoop-env.sh"'
+    - name: 'Update file "{{ hadoop_dir }}/etc/hadoop/core-site.xml"'
+      tags:
+        - setup
+      template:
+        src: 'files/hadoop/core-site.xml'
+        dest: '{{ hadoop_dir }}/etc/hadoop/core-site.xml'
+    - name: 'Update file "{{ hadoop_dir }}/etc/hadoop/hdfs-site.xml"'
+      tags:
+        - setup
+      template:
+        src: 'files/hadoop/hdfs-site.xml'
+        dest: '{{ hadoop_dir }}/etc/hadoop/hdfs-site.xml'
+    - name: 'Update file "{{ hadoop_dir }}/etc/hadoop/mapred-site.xml"'
+      tags:
+        - setup
+      template:
+        src: 'files/hadoop/mapred-site.xml'
+        dest: '{{ hadoop_dir }}/etc/hadoop/mapred-site.xml'
+    - name: 'Update file "{{ hadoop_dir }}/etc/hadoop/yarn-site.xml"'
+      tags:
+        - setup
+      template:
+        src: 'files/hadoop/yarn-site.xml'
+        dest: '{{ hadoop_dir }}/etc/hadoop/yarn-site.xml'
+    - name: 'Update file "{{ spark_dir }}/conf/spark-env.sh"'
+      tags:
+        - setup
+      template:
+        src: 'files/spark/spark-env.sh'
+        dest: '{{ spark_dir }}/conf/spark-env.sh'
+    - name: 'Update file "{{ spark_dir }}/conf/spark-defaults.conf"'
+      tags:
+        - setup
+      template:
+        src: 'files/spark/spark-defaults.conf'
+        dest: '{{ spark_dir }}/conf/spark-defaults.conf'
+
+- hosts: hadoop_master
+  tasks:
+# Format hdfs
+    - name: 'Format hdfs'
+      tags:
+        - setup
+      shell: 'yes Y | hdfs namenode -format'
+      environment:
+        PATH: '{{ java_dir }}/bin:{{ hadoop_dir }}/bin:{{ hadoop_dir }}/sbin:{{ spark_dir }}/bin:{{ ansible_env.PATH }}'
+# Start hadoop
+    - name: 'Start hadoop'
+      tags:
+        - start
+      shell: '{{ item }}'
+      with_items:
+        - 'start-dfs.sh'
+        - 'start-yarn.sh'
+        - 'sleep 30'
+      environment:
+        PATH: '{{ java_dir }}/bin:{{ hadoop_dir }}/bin:{{ hadoop_dir }}/sbin:{{ spark_dir }}/bin:{{ ansible_env.PATH }}'
+# Stop hadoop
+    - name: 'Stop hadoop'
+      tags:
+        - stop
+      shell: '{{ item }}'
+      with_items:
+        - 'stop-yarn.sh'
+        - 'stop-dfs.sh'
+      environment:
+        PATH: '{{ java_dir }}/bin:{{ hadoop_dir }}/bin:{{ hadoop_dir }}/sbin:{{ spark_dir }}/bin:{{ ansible_env.PATH }}'

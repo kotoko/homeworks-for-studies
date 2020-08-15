@@ -1,0 +1,11 @@
+<configuration>
+	<property>
+		<name>fs.defaultFS</name>
+		<value>hdfs://{{ master }}:9000</value>
+		<description>NameNode URI</description>
+	</property>
+	<property>
+		<name>hadoop.tmp.dir</name>
+		<value>{{ hadoop_tmp }}/hadoop-${user.name}</value>
+	</property>
+</configuration>
