@@ -1,0 +1,34 @@
+string s() {
+	return "abc";
+}
+
+int main() {
+	string s1;
+	boolean b1;
+	int n1;
+
+	b1 = (s() + s() =="abcabc") && (n1 == 1 || n1 == 0);
+	if (b1) {
+		printBoolean(b1);
+	} else {
+		printBoolean(b1);
+	}
+
+	string s2;
+	int i = 0;
+	while (i < 20) {
+		s2 = s2 + "Yo! ";
+		printString(s2);
+		printString("\n");
+		i++;
+	}
+
+	boolean b2 = false;
+	while(true)
+		if (true) {
+			return 0;
+		}
+/*
+	printString("Bye\n");
+	return 0;*/
+}
